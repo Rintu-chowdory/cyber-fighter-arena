@@ -18,21 +18,33 @@ export default class GameOverScene extends Phaser.Scene {
     this.add.text(width / 2, height / 3, 'GAME OVER', {
       fontSize: '64px',
       color: '#ff0000',
-      fontFamily: 'Arial',
+      fontStyle: 'bold',
+      fontFamily: 'monospace',
+      align: 'center',
+      stroke: '#000000',
+      strokeThickness: 4,
     }).setOrigin(0.5);
 
     // Score display
     this.add.text(width / 2, height / 2, `Final Score: ${score}`, {
       fontSize: '32px',
       color: '#ffffff',
-      fontFamily: 'Arial',
+      fontStyle: 'bold',
+      fontFamily: 'monospace',
+      align: 'center',
+      stroke: '#000000',
+      strokeThickness: 2,
     }).setOrigin(0.5);
 
     // Restart instructions
     this.add.text(width / 2, height * 0.7, 'Click or Press SPACE to Play Again', {
       fontSize: '24px',
       color: '#00ff00',
-      fontFamily: 'Arial',
+      fontStyle: 'bold',
+      fontFamily: 'monospace',
+      align: 'center',
+      stroke: '#000000',
+      strokeThickness: 2,
     }).setOrigin(0.5);
 
     // Input handlers

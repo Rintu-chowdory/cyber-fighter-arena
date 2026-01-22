@@ -7,7 +7,9 @@ export default class BootScene extends Phaser.Scene {
 
   preload() {
     // Preload assets here
-    this.load.text('mapData', 'assets/map.json');
+    this.load.image('player', '/assets/player.png');
+    this.load.image('enemy', '/assets/enemy.png');
+    this.load.text('mapData', '/assets/map.json');
   }
 
   create() {

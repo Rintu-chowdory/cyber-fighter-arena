@@ -13,14 +13,22 @@ export default class MenuScene extends Phaser.Scene {
     this.add.text(width / 2, height / 4, 'Cyber Fighter Arena', {
       fontSize: '48px',
       color: '#00ff00',
-      fontFamily: 'Arial',
+      fontStyle: 'bold',
+      fontFamily: 'monospace',
+      align: 'center',
+      stroke: '#000000',
+      strokeThickness: 4,
     }).setOrigin(0.5);
 
     // Instructions
     this.add.text(width / 2, height / 2, 'Click or Press SPACE to Start', {
       fontSize: '24px',
       color: '#ffffff',
-      fontFamily: 'Arial',
+      fontStyle: 'bold',
+      fontFamily: 'monospace',
+      align: 'center',
+      stroke: '#000000',
+      strokeThickness: 2,
     }).setOrigin(0.5);
 
     // Add input handlers
