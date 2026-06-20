@@ -169,9 +169,11 @@ export default class GameOverScene extends Phaser.Scene {
     this.input.keyboard!.removeAllListeners();
     this.input.removeAllListeners();
 
+    const apiBase = (import.meta.env.VITE_API_URL as string | undefined) ?? '';
+
     if (this.finalScore > 0) {
       try {
-        await fetch('/api/scores', {
+        await fetch(`${apiBase}/api/scores`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -184,7 +186,7 @@ export default class GameOverScene extends Phaser.Scene {
     }
 
     try {
-      const res = await fetch('/api/leaderboard');
+      const res = await fetch(`${apiBase}/api/leaderboard`);
       this.leaderboard = await res.json();
     } catch {
       this.leaderboard = [];

@@ -112,6 +112,19 @@ The project uses **GitHub Actions** for automated deployment:
 3. Set source to "Deploy from a branch"
 4. Select `gh-pages` branch (created automatically by the workflow)
 
+### Connecting the Live Leaderboard
+
+The leaderboard API runs on Replit. To make scores visible on the GitHub Pages build:
+
+1. Deploy the Replit project so the API server has a stable public URL  
+   (e.g. `https://your-repl-name.replit.app`)
+2. In your GitHub repository go to **Settings → Secrets and variables → Actions**
+3. Add a new secret named **`VITE_API_URL`** with the value set to your Replit public URL  
+   (no trailing slash, e.g. `https://your-repl-name.replit.app`)
+4. Push a commit to `main`/`master` — the build will bake the URL in and the deployed game will talk to the live API
+
+In development the proxy in `vite.config.ts` handles `/api` requests to `localhost:3001`, so no env var is needed locally.
+
 ## Technologies Used
 
 - **Vite** - Next Generation Frontend Tooling
