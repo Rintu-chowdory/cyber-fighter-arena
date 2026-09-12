@@ -27,7 +27,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22.x'
           cache: 'npm'
 
       - name: Create .npmrc with retry settings
@@ -43,11 +43,14 @@ jobs:
           EOF
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund --prefer-offline
+        run: npm ci --include=dev --no-audit --no-fund --prefer-offline
         env:
           npm_config_fetch_retries: 10
           npm_config_fetch_retry_mintimeout: 10000
           npm_config_fetch_retry_maxtimeout: 60000
+
+      - name: Verify build dependencies
+        run: test -x node_modules/.bin/vite && test -x node_modules/.bin/tsc
 
       - name: Build frontend
         run: npm run build
