@@ -1,6 +1,7 @@
 import express from 'express';
 import { Pool } from 'pg';
 import cors from 'cors';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { existsSync } from 'fs';
@@ -18,8 +19,27 @@ const pool = new Pool({
 
 const MAX_WAVE = 999;
 const MAX_SCORE_DB = 2_147_483_647;
+const SCORE_SUBMISSION_TTL_MS = 24 * 60 * 60 * 1000;
+const SCORE_SUBMISSION_CLEANUP_MS = 15 * 60 * 1000;
 const SCORE_RATE_LIMIT = 5;
 const SCORE_RATE_WINDOW_MS = 60_000;
+const scoreSecret = process.env.VITE_SCORE_SECRET ?? process.env.SCORE_SECRET ?? '';
+
+type UsedScoreSubmission = {
+  expiresAt: number;
+};
+
+const usedScoreSubmissions = new Map<string, UsedScoreSubmission>();
+const scoreSubmissionCleanup = setInterval(() => {
+  const now = Date.now();
+
+  for (const [submissionId, entry] of usedScoreSubmissions) {
+    if (entry.expiresAt <= now) {
+      usedScoreSubmissions.delete(submissionId);
+    }
+  }
+}, SCORE_SUBMISSION_CLEANUP_MS);
+scoreSubmissionCleanup.unref?.();
 
 type ScoreRateLimitEntry = {
   count: number;
@@ -49,6 +69,37 @@ function maxTheoreticalScore(maxWave: number): number {
     }
   }
   return maxScore;
+}
+
+function isValidScoreToken(
+  token: string,
+  score: number,
+  wave: number,
+  submissionId: string
+): boolean {
+  if (!scoreSecret || !/^[a-f0-9]{64}$/i.test(token)) {
+    return false;
+  }
+
+  const expected = createHmac('sha256', scoreSecret)
+    .update(`${score}:${wave}:${submissionId}`)
+    .digest('hex');
+
+  return timingSafeEqual(Buffer.from(token, 'hex'), Buffer.from(expected, 'hex'));
+}
+
+function claimScoreSubmission(submissionId: string): boolean {
+  const now = Date.now();
+  const existing = usedScoreSubmissions.get(submissionId);
+
+  if (existing && existing.expiresAt > now) {
+    return false;
+  }
+
+  usedScoreSubmissions.set(submissionId, {
+    expiresAt: now + SCORE_SUBMISSION_TTL_MS,
+  });
+  return true;
 }
 
 app.use(cors());
@@ -107,10 +158,24 @@ app.get('/api/leaderboard', async (_req, res) => {
 });
 
 app.post('/api/scores', scoreRateLimiter, async (req, res) => {
-  const { name, score, wave } = req.body;
+  const { name, score, wave, submissionId, token } = req.body;
 
-  if (typeof name !== 'string' || typeof score !== 'number' || typeof wave !== 'number') {
+  if (
+    typeof name !== 'string' ||
+    typeof score !== 'number' ||
+    typeof wave !== 'number' ||
+    typeof submissionId !== 'string' ||
+    typeof token !== 'string'
+  ) {
     return res.status(400).json({ error: 'Invalid payload' });
+  }
+
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      submissionId
+    )
+  ) {
+    return res.status(400).json({ error: 'Invalid submission ID' });
   }
 
   if (!Number.isInteger(score) || !Number.isInteger(wave)) {
@@ -132,6 +197,14 @@ app.post('/api/scores', scoreRateLimiter, async (req, res) => {
   const theoreticalMax = maxTheoreticalScore(wave);
   if (score > theoreticalMax) {
     return res.status(400).json({ error: 'Score exceeds maximum achievable for this wave' });
+  }
+
+  if (!isValidScoreToken(token, score, wave, submissionId)) {
+    return res.status(400).json({ error: 'Invalid score token' });
+  }
+
+  if (!claimScoreSubmission(submissionId)) {
+    return res.status(400).json({ error: 'Score submission has already been used' });
   }
 
   const cleanName = name.trim().toUpperCase().slice(0, 16) || 'ANON';

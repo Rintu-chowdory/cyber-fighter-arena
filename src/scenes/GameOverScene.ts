@@ -16,6 +16,7 @@ export default class GameOverScene extends Phaser.Scene {
   private leaderboard: LeaderboardEntry[] = [];
   private phase: 'name' | 'board' = 'name';
   private submitted: boolean = false;
+  private submissionId: string = '';
 
   constructor() {
     super('GameOverScene');
@@ -28,6 +29,7 @@ export default class GameOverScene extends Phaser.Scene {
     this.cursorIndex = 0;
     this.phase = 'name';
     this.submitted = false;
+    this.submissionId = crypto.randomUUID();
 
     const prev = this.registry.get('highScore') || 0;
     if (this.finalScore > prev) {
@@ -160,7 +162,7 @@ export default class GameOverScene extends Phaser.Scene {
     });
   }
 
-  private async signScore(score: number, wave: number): Promise<string> {
+  private async signScore(score: number, wave: number, submissionId: string): Promise<string> {
     const secret = (import.meta.env.VITE_SCORE_SECRET as string | undefined) ?? '';
     if (!secret) return '';
     try {
@@ -172,7 +174,11 @@ export default class GameOverScene extends Phaser.Scene {
         false,
         ['sign'],
       );
-      const sig = await crypto.subtle.sign('HMAC', key, enc.encode(`${score}:${wave}`));
+      const sig = await crypto.subtle.sign(
+        'HMAC',
+        key,
+        enc.encode(`${score}:${wave}:${submissionId}`)
+      );
       return Array.from(new Uint8Array(sig))
         .map(b => b.toString(16).padStart(2, '0'))
         .join('');
@@ -194,7 +200,7 @@ export default class GameOverScene extends Phaser.Scene {
 
     if (this.finalScore > 0) {
       try {
-        const token = await this.signScore(this.finalScore, this.finalWave);
+        const token = await this.signScore(this.finalScore, this.finalWave, this.submissionId);
         await fetch(`${apiBase}/api/scores`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -202,6 +208,7 @@ export default class GameOverScene extends Phaser.Scene {
             name: this.playerName,
             score: this.finalScore,
             wave: this.finalWave,
+            submissionId: this.submissionId,
             token,
           }),
         });
