@@ -160,6 +160,27 @@ export default class GameOverScene extends Phaser.Scene {
     });
   }
 
+  private async signScore(score: number, wave: number): Promise<string> {
+    const secret = (import.meta.env.VITE_SCORE_SECRET as string | undefined) ?? '';
+    if (!secret) return '';
+    try {
+      const enc = new TextEncoder();
+      const key = await crypto.subtle.importKey(
+        'raw',
+        enc.encode(secret),
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign'],
+      );
+      const sig = await crypto.subtle.sign('HMAC', key, enc.encode(`${score}:${wave}`));
+      return Array.from(new Uint8Array(sig))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+    } catch {
+      return '';
+    }
+  }
+
   private async confirmName() {
     if (this.phase !== 'name' || this.submitted) return;
     this.submitted = true;
@@ -173,6 +194,7 @@ export default class GameOverScene extends Phaser.Scene {
 
     if (this.finalScore > 0) {
       try {
+        const token = await this.signScore(this.finalScore, this.finalWave);
         await fetch(`${apiBase}/api/scores`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -180,6 +202,7 @@ export default class GameOverScene extends Phaser.Scene {
             name: this.playerName,
             score: this.finalScore,
             wave: this.finalWave,
+            token,
           }),
         });
       } catch { /* offline / server not available */ }

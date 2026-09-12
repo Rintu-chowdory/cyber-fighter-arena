@@ -63,3 +63,8 @@ run = ["npx", "tsx", "server/index.ts"]
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 60000
+
+[userenv]
+
+[userenv.shared]
+VITE_SCORE_SECRET = "14b8759813b55dea1fc03e62c7b34519648c18a7f90140e9f80011d96f66115c"

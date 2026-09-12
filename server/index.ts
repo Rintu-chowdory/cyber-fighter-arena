@@ -16,6 +16,22 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
+const MAX_WAVE = 999;
+const MAX_SCORE_DB = 2_147_483_647;
+
+function maxTheoreticalScore(maxWave: number): number {
+  let totalEnemies = 0;
+  let maxScore = 0;
+  for (let w = 1; w <= maxWave; w++) {
+    const count = 3 + Math.floor((w - 1) * 1.5);
+    for (let k = 0; k < count; k++) {
+      totalEnemies += 1;
+      maxScore += 100 * totalEnemies;
+    }
+  }
+  return maxScore;
+}
+
 app.use(cors());
 app.use(express.json());
 
@@ -38,10 +54,28 @@ app.post('/api/scores', async (req, res) => {
     return res.status(400).json({ error: 'Invalid payload' });
   }
 
-  const cleanName = name.trim().toUpperCase().slice(0, 16) || 'ANON';
+  if (!Number.isInteger(score) || !Number.isInteger(wave)) {
+    return res.status(400).json({ error: 'Score and wave must be integers' });
+  }
+
   if (score < 0 || wave < 1) {
     return res.status(400).json({ error: 'Invalid score or wave' });
   }
+
+  if (wave > MAX_WAVE) {
+    return res.status(400).json({ error: 'Wave value out of range' });
+  }
+
+  if (score > MAX_SCORE_DB) {
+    return res.status(400).json({ error: 'Score exceeds maximum storable value' });
+  }
+
+  const theoreticalMax = maxTheoreticalScore(wave);
+  if (score > theoreticalMax) {
+    return res.status(400).json({ error: 'Score exceeds maximum achievable for this wave' });
+  }
+
+  const cleanName = name.trim().toUpperCase().slice(0, 16) || 'ANON';
 
   try {
     await pool.query(
