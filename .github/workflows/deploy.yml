@@ -27,9 +27,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '18'
           cache: 'npm'
-          cache-dependency-path: 'package-lock.json'
 
       - name: Create .npmrc with retry settings
         run: |
@@ -38,12 +37,17 @@ jobs:
           fetch-timeout=120000
           fetch-retry-mintimeout=20000
           fetch-retry-maxtimeout=120000
+          fetch-retry-mintimeout=10000
+          fetch-retry-maxtimeout=60000
+          fetch-retries=10
           EOF
 
-      - name: Install dependencies (using npm ci for faster CI builds)
-        run: npm ci --no-audit --no-fund
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund --prefer-offline
         env:
-          npm_config_fetch_retries: 5
+          npm_config_fetch_retries: 10
+          npm_config_fetch_retry_mintimeout: 10000
+          npm_config_fetch_retry_maxtimeout: 60000
 
       - name: Build frontend
         run: npm run build
