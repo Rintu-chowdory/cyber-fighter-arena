@@ -14,7 +14,7 @@ export default class BootScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.text('mapData', '/assets/map.json');
+    this.load.text('mapData', `${import.meta.env.BASE_URL}assets/map.json`);
   }
 
   create() {
